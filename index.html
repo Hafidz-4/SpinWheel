@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin Wheel Pembagian Kelompok</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <h1>Pembagian Kelompok Mahasiswa</h1>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#setup-screen" class="active nav-link" data-target="setup-screen">Setup</a></li>
+                    <li><a href="#spin-screen" class="nav-link" data-target="spin-screen">Spin Wheel</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Screen 1: Setup Screen -->
+        <div id="setup-screen" class="screen active-screen">
+            <div class="setup-section">
+                <div class="input-group">
+                    <h2>Tambah Mahasiswa</h2>
+                    <div class="input-container">
+                        <input type="text" id="student-name" placeholder="Nama Mahasiswa">
+                        <button id="add-student">Tambah</button>
+                    </div>
+                    
+                    <!-- Tambahan untuk input batch mahasiswa -->
+                    <div class="batch-input-container">
+                        <button id="show-batch-input">Input Massal</button>
+                        <div id="batch-input-modal" class="modal">
+                            <div class="modal-content">
+                                <span class="close">&times;</span>
+                                <h3>Input Massal Mahasiswa</h3>
+                                <p>Masukkan daftar nama mahasiswa (satu nama per baris)</p>
+                                <textarea id="batch-student-names" rows="10" placeholder="NIKOLAS (K)..."></textarea>
+                                <button id="add-batch-students">Tambahkan Semua</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="student-list-container">
+                        <h3>Daftar Mahasiswa</h3>
+                        <ul id="student-list"></ul>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <h2>Tambah Kelompok</h2>
+                    <div class="input-container">
+                        <input type="text" id="group-name" placeholder="Nama Kelompok">
+                        <button id="add-group">Tambah</button>
+                    </div>
+                    
+                    <!-- Tambahan untuk setting jumlah mahasiswa per kelompok -->
+                    <div class="group-settings">
+                        <h3>Pengaturan Kelompok</h3>
+                        <div class="setting-item">
+                            <label for="students-per-group">Jumlah Mahasiswa per Kelompok:</label>
+                            <input type="number" id="students-per-group" min="1" max="20" value="6">
+                        </div>
+                    </div>
+                    
+                    <div class="group-list-container">
+                        <h3>Daftar Kelompok</h3>
+                        <ul id="group-list"></ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="navigation-buttons">
+                <button id="go-to-spin" class="nav-button">Lanjut ke Spin Wheel</button>
+            </div>
+        </div>
+        
+        <!-- Screen 2: Spin Wheel Screen -->
+        <div id="spin-screen" class="screen">
+            <div class="wheel-section">
+                <div class="wheel-container">
+                    <canvas id="wheel" width="400" height="400"></canvas>
+                    <div id="spin-btn">SPIN</div>
+                    <div id="arrow"></div>
+                </div>
+                
+                <div class="result-container">
+                    <h2>Hasil Pembagian Kelompok</h2>
+                    <div id="current-spin-info">
+                        <div id="remaining-counter">Sisa mahasiswa: 0</div>
+                        <div id="current-group">Kelompok saat ini: -</div>
+                        <div id="current-count">Anggota terpilih: 0/<span id="max-per-group">6</span></div>
+                    </div>
+                    <div id="result-box"></div>
+                    <div class="action-buttons">
+                        <button id="reset-btn">Reset Hasil</button>
+                        <button id="download-btn">Download Hasil</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="navigation-buttons">
+                <button id="go-to-setup" class="nav-button">Kembali ke Setup</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
