@@ -369,6 +369,29 @@ textarea {
     margin-top: 10px;
 }
 
+.footer {
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.footer a {
+    color: #aaa;
+}
+.footer a:hover {
+    color: black;
+}
+.footer a:focus {
+    outline: none;
+}
+.footer a:focus-visible {
+    outline: none;
+}
+.footer a:focus-visible::after {
+    content: "";
+}
+
 @media (max-width: 992px) {
     .setup-section, .wheel-section {
         flex-direction: column;
