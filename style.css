@@ -15,15 +15,16 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
+    padding-bottom: 50px;
 }
 
 /* Header and Navigation */
 .main-header {
     background: linear-gradient(135deg, #6e8efb, #a777e3);
     color: white;
-    padding: 15px 0;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    margin-bottom: 30px;
+    padding: 10px 0;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    margin-bottom: 35px;
 }
 
 .main-header h1 {
@@ -371,9 +372,14 @@ textarea {
 
 .footer {
     position: fixed;
-    bottom: 15px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #f8f9fa;
+    padding: 10px;
+    text-align: center;
+    z-index: 50;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .footer a {
