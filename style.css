@@ -15,7 +15,7 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
-    padding-bottom: 50px;
+    padding-bottom: 10px;
 }
 
 /* Header and Navigation */
@@ -45,12 +45,26 @@ body {
     font-size: 18px;
     font-weight: 500;
     padding: 8px 15px;
-    border-radius: 5px;
+    border-radius: 8px;
     transition: all 0.3s ease;
 }
 
 .main-nav ul li a:hover, .main-nav ul li a.active {
     background: rgba(255, 255, 255, 0.2);
+    border-bottom: none;
+}
+
+.main-nav ul li a.active::after {
+    display: none;
+}
+
+.nav-link {
+    border-bottom: none !important;
+    text-decoration: none !important;
+}
+
+.nav-link::after {
+    display: none !important;
 }
 
 /* Screen Control */
