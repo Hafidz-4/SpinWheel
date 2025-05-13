@@ -23,7 +23,7 @@ body {
 .main-header {
     background: linear-gradient(135deg, #6e8efb, #a777e3);
     color: white;
-    padding: 10px 0;
+    padding: 2px 0;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
     margin-bottom: 35px;
     width: 100%;
@@ -31,7 +31,8 @@ body {
 
 .main-header h1 {
     text-align: center;
-    margin-bottom: 15px;
+    margin-top: 15px;
+    margin-bottom: 0px;
     font-size: clamp(1.5rem, 4vw, 2rem); /* Responsive font size */
 }
 
@@ -383,15 +384,16 @@ li:last-child {
     width: 100%;
 }
 
-#show-batch-input {
+#show-batch-input, #show-batch-group-input { /* Added #show-batch-group-input */
     width: 100%;
     border-radius: 5px;
-    background: #4caf50;
+    background: #4caf50; /* Default color, can be differentiated if needed */
+    margin-top: 5px; /* Added some margin for separation */
 }
-
-#show-batch-input:hover {
+#show-batch-input:hover, #show-batch-group-input:hover { /* Added #show-batch-group-input */
     background: #3e9142;
 }
+
 
 .modal {
     display: none;
@@ -416,7 +418,7 @@ li:last-child {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-.close {
+.close, .close-group-modal { /* Added .close-group-modal */
     color: #aaa;
     float: right;
     font-size: 28px;
@@ -424,7 +426,7 @@ li:last-child {
     cursor: pointer;
 }
 
-.close:hover {
+.close:hover, .close-group-modal:hover { /* Added .close-group-modal */
     color: black;
 }
 
@@ -438,7 +440,7 @@ textarea {
     resize: vertical;
 }
 
-#add-batch-students {
+#add-batch-students, #add-batch-groups { /* Added #add-batch-groups */
     width: 100%;
     padding: 12px;
     border-radius: 5px;
