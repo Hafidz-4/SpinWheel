@@ -26,26 +26,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
     
-    // Batch input elements
+    // Batch input elements (Mahasiswa)
     const showBatchInputBtn = document.getElementById('show-batch-input');
     const batchInputModal = document.getElementById('batch-input-modal');
     const batchStudentNamesInput = document.getElementById('batch-student-names');
     const addBatchStudentsBtn = document.getElementById('add-batch-students');
-    const closeModalBtn = document.querySelector('.close');
+    const closeModalBtn = document.querySelector('.close'); 
+
+    // Batch input elements (Kelompok)
+    const showBatchGroupInputBtn = document.getElementById('show-batch-group-input');
+    const batchGroupInputModal = document.getElementById('batch-group-input-modal');
+    const batchGroupNamesInput = document.getElementById('batch-group-names');
+    const addBatchGroupsBtn = document.getElementById('add-batch-groups');
+    const closeGroupModalBtn = document.querySelector('.close-group-modal'); 
     
     // Data
     let students = [];
     let groups = [];
-    let results = {};
+    let results = {}; // Ini yang akan direset
     let remainingStudents = [];
     let studentsPerGroup = parseInt(studentsPerGroupInput.value) || 6;
     let currentSpinData = {
         group: null,
         count: 0,
-        isSpinning: false
+        isSpinning: false,
+        currentWheelAngle: 0 
     };
     
-    // Colors for wheel
     const colors = [
         '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
         '#9966FF', '#FF9F40', '#8AC24A', '#FF5252',
@@ -57,55 +64,44 @@ document.addEventListener('DOMContentLoaded', function() {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const targetId = this.getAttribute('data-target');
-            
-            // Remove active class from all links and screens
             navLinks.forEach(l => l.classList.remove('active'));
             screens.forEach(s => s.classList.remove('active-screen'));
-            
-            // Add active class to clicked link and target screen
             this.classList.add('active');
             document.getElementById(targetId).classList.add('active-screen');
         });
     });
     
     goToSpinBtn.addEventListener('click', function() {
-        // Switch to spin screen
         navLinks.forEach(l => l.classList.remove('active'));
         screens.forEach(s => s.classList.remove('active-screen'));
-        
         document.querySelector('[data-target="spin-screen"]').classList.add('active');
         document.getElementById('spin-screen').classList.add('active-screen');
-        
-        // Update the max students per group display
         maxPerGroupDisplay.textContent = studentsPerGroup;
-        
-        // Redraw wheel to ensure it's updated
-        updateRemainingStudents();
-        drawWheel();
+        updateRemainingStudents(); // Pastikan sisa mahasiswa terupdate
+        drawWheel(); 
     });
     
     goToSetupBtn.addEventListener('click', function() {
-        // Switch to setup screen
         navLinks.forEach(l => l.classList.remove('active'));
         screens.forEach(s => s.classList.remove('active-screen'));
-        
         document.querySelector('[data-target="setup-screen"]').classList.add('active');
         document.getElementById('setup-screen').classList.add('active-screen');
     });
     
-    // Update students per group setting
     studentsPerGroupInput.addEventListener('change', function() {
         studentsPerGroup = parseInt(this.value) || 6;
         maxPerGroupDisplay.textContent = studentsPerGroup;
-        
-        // Reset current spin if active
-        if (currentSpinData.group) {
-            currentSpinData.count = 0;
+        if (currentSpinData.group && results[currentSpinData.group]) { // Pastikan results[currentSpinData.group] ada
+            currentSpinData.count = results[currentSpinData.group].length;
+            currentCount.textContent = `Anggota terpilih: ${currentSpinData.count}/${studentsPerGroup}`;
+        } else if (currentSpinData.group) { // Grup ada tapi belum ada hasil
+             currentSpinData.count = 0;
+             currentCount.textContent = `Anggota terpilih: 0/${studentsPerGroup}`;
+        } else { // Tidak ada grup aktif
             currentCount.textContent = `Anggota terpilih: 0/${studentsPerGroup}`;
         }
     });
     
-    // Add student
     addStudentBtn.addEventListener('click', function() {
         const name = studentNameInput.value.trim();
         if (name && !students.includes(name)) {
@@ -114,431 +110,492 @@ document.addEventListener('DOMContentLoaded', function() {
             updateStudentList();
             updateRemainingStudents();
             drawWheel();
+        } else if (name && students.includes(name)) {
+            alert("Nama mahasiswa sudah ada dalam daftar.");
+        } else if (!name) {
+            alert("Nama mahasiswa tidak boleh kosong.");
         }
     });
     
-    // Add group
     addGroupBtn.addEventListener('click', function() {
         const name = groupNameInput.value.trim();
         if (name && !groups.includes(name)) {
             groups.push(name);
             groupNameInput.value = '';
             updateGroupList();
+        } else if (name && groups.includes(name)) {
+            alert("Nama kelompok sudah ada dalam daftar.");
+        } else if (!name) {
+            alert("Nama kelompok tidak boleh kosong.");
         }
     });
+
+    if (showBatchInputBtn) {
+        showBatchInputBtn.addEventListener('click', () => batchInputModal.style.display = 'block');
+    }
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => batchInputModal.style.display = 'none');
+    }
     
-    // Batch input modal control
-    showBatchInputBtn.addEventListener('click', function() {
-        batchInputModal.style.display = 'block';
-    });
-    
-    closeModalBtn.addEventListener('click', function() {
-        batchInputModal.style.display = 'none';
-    });
+    if (showBatchGroupInputBtn) {
+        showBatchGroupInputBtn.addEventListener('click', () => batchGroupInputModal.style.display = 'block');
+    }
+    if (closeGroupModalBtn) {
+        closeGroupModalBtn.addEventListener('click', () => batchGroupInputModal.style.display = 'none');
+    }
     
     window.addEventListener('click', function(event) {
-        if (event.target === batchInputModal) {
-            batchInputModal.style.display = 'none';
-        }
+        if (event.target === batchInputModal) batchInputModal.style.display = 'none';
+        if (event.target === batchGroupInputModal) batchGroupInputModal.style.display = 'none';
     });
     
-    // Add batch students
-    addBatchStudentsBtn.addEventListener('click', function() {
-        const batchText = batchStudentNamesInput.value.trim();
-        if (batchText) {
-            const namesList = batchText.split('\n').filter(name => name.trim() !== '');
-            let addedCount = 0;
-            
-            namesList.forEach(name => {
-                const trimmedName = name.trim();
-                if (trimmedName && !students.includes(trimmedName)) {
-                    students.push(trimmedName);
-                    addedCount++;
+    if (addBatchStudentsBtn) {
+        addBatchStudentsBtn.addEventListener('click', function() {
+            const batchText = batchStudentNamesInput.value.trim();
+            if (batchText) {
+                const namesList = batchText.split('\n').map(name => name.trim()).filter(name => name !== '');
+                let addedCount = 0;
+                let duplicateCount = 0;
+                namesList.forEach(trimmedName => {
+                    if (trimmedName && !students.includes(trimmedName)) {
+                        students.push(trimmedName);
+                        addedCount++;
+                    } else if (trimmedName && students.includes(trimmedName)) {
+                        duplicateCount++;
+                    }
+                });
+                batchStudentNamesInput.value = '';
+                batchInputModal.style.display = 'none';
+                let alertMessage = "";
+                if (addedCount > 0) {
+                    alertMessage += `Berhasil menambahkan ${addedCount} mahasiswa baru. `;
+                    updateStudentList(); updateRemainingStudents(); drawWheel();
                 }
-            });
-            
-            // Update UI
-            batchStudentNamesInput.value = '';
-            batchInputModal.style.display = 'none';
-            
-            // Show notification
-            if (addedCount > 0) {
-                alert(`Berhasil menambahkan ${addedCount} mahasiswa baru.`);
-                updateStudentList();
-                updateRemainingStudents();
-                drawWheel();
-            } else {
-                alert('Tidak ada mahasiswa baru yang ditambahkan.');
+                if (duplicateCount > 0) {
+                    alertMessage += `${duplicateCount} nama mahasiswa sudah ada/duplikat.`;
+                }
+                if (!alertMessage) {
+                     alertMessage = 'Tidak ada mahasiswa baru yang valid untuk ditambahkan.';
+                }
+                alert(alertMessage.trim());
             }
-        }
-    });
+        });
+    }
+
+    if (addBatchGroupsBtn) {
+        addBatchGroupsBtn.addEventListener('click', function() {
+            const batchText = batchGroupNamesInput.value.trim();
+            if (batchText) {
+                const groupNamesList = batchText.split('\n').map(name => name.trim()).filter(name => name !== '');
+                let addedCount = 0;
+                let duplicateCount = 0;
+                groupNamesList.forEach(trimmedName => {
+                    if (trimmedName && !groups.includes(trimmedName)) {
+                        groups.push(trimmedName);
+                        addedCount++;
+                    } else if (trimmedName && groups.includes(trimmedName)) {
+                        duplicateCount++;
+                    }
+                });
+                batchGroupNamesInput.value = '';
+                batchGroupInputModal.style.display = 'none';
+                let alertMessage = "";
+
+                if (addedCount > 0) {
+                    alertMessage += `Berhasil menambahkan ${addedCount} kelompok baru. `;
+                    updateGroupList();
+                }
+                if (duplicateCount > 0) {
+                    alertMessage += `${duplicateCount} nama kelompok sudah ada/duplikat.`;
+                }
+                 if (!alertMessage) {
+                     alertMessage = 'Tidak ada kelompok baru yang valid untuk ditambahkan.';
+                }
+                alert(alertMessage.trim());
+            }
+        });
+    }
     
-    // Update student list in UI
     function updateStudentList() {
         studentList.innerHTML = '';
         students.forEach((student, index) => {
-            const li = document.createElement('li');
-            li.textContent = student;
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Hapus';
-            deleteBtn.className = 'delete-btn';
+            const li = document.createElement('li'); li.textContent = student;
+            const deleteBtn = document.createElement('button'); deleteBtn.textContent = 'Hapus'; deleteBtn.className = 'delete-btn';
             deleteBtn.addEventListener('click', function() {
-                students.splice(index, 1);
-                updateStudentList();
-                updateRemainingStudents();
+                const studentNameToDelete = students[index];
+                students.splice(index, 1); // Hapus dari daftar utama
+                
+                // Hapus dari results jika sudah terbagi
+                for (const groupName in results) {
+                    const studentIndexInGroup = results[groupName].indexOf(studentNameToDelete);
+                    if (studentIndexInGroup > -1) {
+                        results[groupName].splice(studentIndexInGroup, 1);
+                        if (currentSpinData.group === groupName) currentSpinData.count = results[groupName].length;
+                    }
+                }
+                updateStudentList(); updateRemainingStudents(); updateResultsDisplay();
+                if (currentSpinData.group && results[currentSpinData.group]) {
+                     currentCount.textContent = `Anggota terpilih: ${results[currentSpinData.group].length}/${studentsPerGroup}`;
+                } else if (currentSpinData.group) {
+                     currentCount.textContent = `Anggota terpilih: 0/${studentsPerGroup}`;
+                }
                 drawWheel();
             });
-            
-            li.appendChild(deleteBtn);
-            studentList.appendChild(li);
+            li.appendChild(deleteBtn); studentList.appendChild(li);
         });
     }
     
-    // Update group list in UI
     function updateGroupList() {
         groupList.innerHTML = '';
         groups.forEach((group, index) => {
-            const li = document.createElement('li');
-            li.textContent = group;
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Hapus';
-            deleteBtn.className = 'delete-btn';
+            const li = document.createElement('li'); li.textContent = group;
+            const deleteBtn = document.createElement('button'); deleteBtn.textContent = 'Hapus'; deleteBtn.className = 'delete-btn';
             deleteBtn.addEventListener('click', function() {
+                const groupNameToDelete = groups[index];
                 groups.splice(index, 1);
-                updateGroupList();
+                if (results[groupNameToDelete]) {
+                    // Saat grup dihapus, mahasiswa di dalamnya dikembalikan ke 'remainingStudents' jika mereka masih ada di daftar 'students' global
+                    // dan belum masuk ke grup lain.
+                    results[groupNameToDelete].forEach(studentInDeletedGroup => {
+                        if (students.includes(studentInDeletedGroup)) {
+                            let isStillInAnotherGroup = false;
+                            for (const gName in results) {
+                                if (results[gName] && results[gName].includes(studentInDeletedGroup)) {
+                                    isStillInAnotherGroup = true;
+                                    break;
+                                }
+                            }
+                            // Hanya tambahkan ke remainingStudents jika tidak lagi di grup manapun yang tersisa
+                            // updateRemainingStudents() akan menangani ini secara otomatis setelah results diubah.
+                        }
+                    });
+                    delete results[groupNameToDelete]; // Hapus grup dari hasil
+                }
+
+                if (currentSpinData.group === groupNameToDelete) {
+                    currentSpinData.group = null; currentSpinData.count = 0;
+                    currentGroup.textContent = 'Kelompok saat ini: -';
+                    currentCount.textContent = `Anggota terpilih: 0/${studentsPerGroup}`;
+                }
+                updateGroupList(); 
+                updateRemainingStudents(); // Penting untuk diupdate setelah 'results' dimodifikasi
+                updateResultsDisplay(); 
+                drawWheel();
             });
-            
-            li.appendChild(deleteBtn);
-            groupList.appendChild(li);
+            li.appendChild(deleteBtn); groupList.appendChild(li);
         });
     }
     
-    // Update remaining students
     function updateRemainingStudents() {
-        remainingStudents = [...students].filter(student => {
+        remainingStudents = students.filter(student => {
             for (const group in results) {
-                if (results[group].includes(student)) {
-                    return false;
-                }
+                if (results[group] && results[group].includes(student)) return false;
             }
             return true;
         });
-        
         remainingCounter.textContent = `Sisa mahasiswa: ${remainingStudents.length}`;
     }
     
-    // Draw wheel
-    function drawWheel() {
+    function drawSegment(x, y, radius, startAngle, endAngle, color, text) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.arc(x, y, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(x, y);
+        const textAngle = startAngle + (endAngle - startAngle) / 2;
+        ctx.rotate(textAngle);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#fff';
+        ctx.font = '14px Arial';
+        const displayName = text.length > 12 ? text.substring(0, 10) + '...' : text;
+        ctx.fillText(displayName, radius - 20, 5);
+        ctx.restore();
+    }
+
+    function drawWheel(rotationAngle = currentSpinData.currentWheelAngle) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(rotationAngle); 
+        ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
         if (remainingStudents.length === 0) {
-            // Draw empty wheel
             ctx.beginPath();
-            ctx.arc(canvas.width / 2, canvas.height / 2, 170, 0, 2 * Math.PI);
+            ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2 - 10, 0, 2 * Math.PI);
             ctx.fillStyle = '#f0f0f0';
             ctx.fill();
             ctx.stroke();
-            
             ctx.font = '20px Arial';
             ctx.fillStyle = '#333';
             ctx.textAlign = 'center';
-            ctx.fillText('Tidak ada mahasiswa tersisa', canvas.width / 2, canvas.height / 2);
-            return;
-        }
-        
-        const total = remainingStudents.length;
-        const anglePerSegment = (2 * Math.PI) / total;
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const radius = 170;
-        
-        for (let i = 0; i < total; i++) {
-            // Draw segment
-            const startAngle = i * anglePerSegment;
-            const endAngle = (i + 1) * anglePerSegment;
-            
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-            ctx.closePath();
-            ctx.fillStyle = colors[i % colors.length];
-            ctx.fill();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // Draw text
             ctx.save();
-            ctx.translate(centerX, centerY);
-            const textAngle = startAngle + (anglePerSegment / 2);
-            ctx.rotate(textAngle);
-            ctx.textAlign = 'right';
-            ctx.fillStyle = '#fff';
-            ctx.font = '14px Arial';
-            
-            const name = remainingStudents[i];
-            // Truncate text if too long
-            const displayName = name.length > 12 ? name.substring(0, 10) + '...' : name;
-            ctx.fillText(displayName, radius - 30, 5);
+            ctx.setTransform(1, 0, 0, 1, 0, 0); 
+            ctx.fillText('Tidak ada mahasiswa tersisa', canvas.width / 2, canvas.height / 2);
             ctx.restore();
+        } else {
+            const total = remainingStudents.length;
+            const anglePerSegment = (2 * Math.PI) / total;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 10;
+            
+            for (let i = 0; i < total; i++) {
+                const startAngle = i * anglePerSegment;
+                const endAngle = (i + 1) * anglePerSegment;
+                drawSegment(centerX, centerY, radius, startAngle, endAngle, colors[i % colors.length], remainingStudents[i]);
+            }
         }
+        ctx.restore(); 
+    }
+
+    function determineSelectedIndex(finalWheelAngle, totalSegments) {
+        if (totalSegments === 0) return -1; 
+        const anglePerSegment = (2 * Math.PI) / totalSegments;
+        let angleAtArrow = ( (3 * Math.PI / 2) - finalWheelAngle );
+        angleAtArrow = (angleAtArrow % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);
+        const selectedIndex = Math.floor(angleAtArrow / anglePerSegment);
+        return selectedIndex;
     }
     
-    // Spin animation
     function spin() {
         if (currentSpinData.isSpinning) return;
-        if (remainingStudents.length === 0) {
-            alert('Tidak ada mahasiswa tersisa untuk di-spin!');
-            return;
-        }
+        if (remainingStudents.length === 0) { alert('Tidak ada mahasiswa tersisa untuk di-spin!'); return; }
         
-        if (!currentSpinData.group && groups.length === 0) {
-            alert('Tambahkan minimal satu kelompok terlebih dahulu!');
-            return;
-        }
-        
-        // Set/select current group if not set
-        if (!currentSpinData.group) {
-            currentSpinData.group = groups[0];
-            currentSpinData.count = 0;
-            
-            // Initialize results for this group
-            if (!results[currentSpinData.group]) {
-                results[currentSpinData.group] = [];
+        if (!currentSpinData.group || (results[currentSpinData.group] && results[currentSpinData.group].length >= studentsPerGroup)) {
+            let assignedNewGroup = false;
+            for (let i = 0; i < groups.length; i++) {
+                const groupName = groups[i];
+                if (!results[groupName] || results[groupName].length < studentsPerGroup) {
+                    currentSpinData.group = groupName;
+                    currentSpinData.count = results[groupName] ? results[groupName].length : 0;
+                    if (!results[currentSpinData.group]) results[currentSpinData.group] = [];
+                    assignedNewGroup = true; break;
+                }
             }
-            
-            currentGroup.textContent = `Kelompok saat ini: ${currentSpinData.group}`;
-            currentCount.textContent = `Anggota terpilih: ${currentSpinData.count}/${studentsPerGroup}`;
+            if (!assignedNewGroup) {
+                 if (groups.length > 0) alert('Semua kelompok yang ada sudah terisi penuh atau tidak ada yang bisa diisi.');
+                 else alert('Tambahkan minimal satu kelompok terlebih dahulu!');
+                 currentGroup.textContent = (groups.length > 0 && remainingStudents.length > 0) ? `Semua kelompok telah terisi` : `Kelompok saat ini: -`;
+                 currentCount.textContent = `Anggota terpilih: -`; return;
+            }
         }
         
-        currentSpinData.isSpinning = true;
+        currentGroup.textContent = `Kelompok saat ini: ${currentSpinData.group}`;
+        currentCount.textContent = `Anggota terpilih: ${currentSpinData.count}/${studentsPerGroup}`;
+
+        const isCurrentGroupEffectivelyEmpty = currentSpinData.count === 0;
+        if (currentSpinData.group && isCurrentGroupEffectivelyEmpty && remainingStudents.length > 0 && remainingStudents.length === studentsPerGroup) {
+            results[currentSpinData.group] = [...remainingStudents]; currentSpinData.count = studentsPerGroup;
+            const assignedGroupName = currentSpinData.group; remainingStudents = [];
+            currentCount.textContent = `Anggota terpilih: ${currentSpinData.count}/${studentsPerGroup}`;
+            updateResultsDisplay(); updateRemainingStudents(); drawWheel(); 
+            alert(`Semua ${studentsPerGroup} mahasiswa sisa langsung dimasukkan ke ${assignedGroupName}.`);
+            const currentGroupIndex = groups.indexOf(assignedGroupName); let nextGroupAssigned = false;
+            if (currentGroupIndex < groups.length - 1) {
+                for (let i = currentGroupIndex + 1; i < groups.length; i++) {
+                    if (!results[groups[i]] || results[groups[i]].length < studentsPerGroup) {
+                        currentSpinData.group = groups[i]; currentSpinData.count = results[groups[i]] ? results[groups[i]].length : 0;
+                        if (!results[currentSpinData.group]) results[currentSpinData.group] = [];
+                        nextGroupAssigned = true; break;
+                    }
+                }
+                if (!nextGroupAssigned) currentSpinData.group = null; 
+            } else { currentSpinData.group = null; }
+            if (currentSpinData.group) {
+                currentGroup.textContent = `Kelompok saat ini: ${currentSpinData.group}`;
+                currentCount.textContent = `Anggota terpilih: ${currentSpinData.count}/${studentsPerGroup}`;
+            } else {
+                currentGroup.textContent = `Semua kelompok telah terisi`; currentCount.textContent = `Anggota terpilih: -`;
+            }
+            currentSpinData.isSpinning = false; return; 
+        }
         
-        // Random number of rotations between 4 and 6
-        const rotations = 4 + Math.random() * 2;
-        const total = remainingStudents.length;
-        const anglePerSegment = (2 * Math.PI) / total;
+        if (currentSpinData.count >= studentsPerGroup) {
+            alert(`Kelompok ${currentSpinData.group} sudah penuh. Silakan pilih kelompok lain (jika tersedia) atau mulai spin untuk kelompok baru.`);
+            return;
+        }
+
+        currentSpinData.isSpinning = true; spinBtn.textContent = '...'; spinBtn.disabled = true;
         
-        // Random angle within the selected segment
-        const selectedIndex = Math.floor(Math.random() * total);
+        const totalSegments = remainingStudents.length;
+        const baseRotations = 3 + Math.floor(Math.random() * 3); 
+        const randomExtraAngle = Math.random() * (2 * Math.PI); 
+        const targetRotation = (baseRotations * 2 * Math.PI) + randomExtraAngle; 
         
-        // Animation variables
-        let startAngle = 0;
-        let currentAngle = 0;
-        const duration = 5000; // 5 seconds
+        const duration = 5000 + Math.random() * 2000; 
         const startTime = Date.now();
-        
-        // Record final angle for later calculation of actual selected student
-        let finalRotationAngle;
-        
-        // Animation function
+        const startAngle = currentSpinData.currentWheelAngle; 
+
         function animateSpin() {
             const elapsedTime = Date.now() - startTime;
             const progress = Math.min(elapsedTime / duration, 1);
+            const easedProgress = 1 - Math.pow(1 - progress, 4); 
             
-            // Smooth easing function for the entire animation
-            const easedProgress = 1 - Math.pow(1 - progress, 3);
-            
-            // Calculate target angle with extra rotations
-            const targetAngle = rotations * 2 * Math.PI + (selectedIndex * anglePerSegment);
-            currentAngle = startAngle + easedProgress * targetAngle;
-            
-            // Record final angle on last frame for determining actual selection
-            if (progress === 1) {
-                finalRotationAngle = currentAngle;
-            }
-            
-            // Rotate canvas and redraw wheel
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(currentAngle);
-            ctx.translate(-canvas.width / 2, -canvas.height / 2);
-            drawWheel();
-            ctx.restore();
+            currentSpinData.currentWheelAngle = startAngle + easedProgress * targetRotation;
+            drawWheel(currentSpinData.currentWheelAngle); 
             
             if (progress < 1) {
                 requestAnimationFrame(animateSpin);
             } else {
-                // Calculate which student is actually at the arrow position
+                currentSpinData.currentWheelAngle = (currentSpinData.currentWheelAngle % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);
+                drawWheel(currentSpinData.currentWheelAngle); 
+
+                const actualSelectedIndex = determineSelectedIndex(currentSpinData.currentWheelAngle, totalSegments);
+                
                 setTimeout(() => {
-                    // Determine actual selection based on final angle
-                    const actualSelectedIndex = determineSelectedIndex(finalRotationAngle, total);
-                    handleSpinResult(actualSelectedIndex);
-                }, 300);
+                    if (actualSelectedIndex !== -1 && actualSelectedIndex < remainingStudents.length) {
+                        handleSpinResult(actualSelectedIndex);
+                    } else {
+                        console.error("Gagal menentukan indeks valid setelah spin. Sisa mahasiswa:", remainingStudents.length, "Indeks terpilih:", actualSelectedIndex);
+                        if (remainingStudents.length > 0) {
+                           alert("Terjadi kesalahan pada penentuan hasil spin, mencoba memilih secara acak.");
+                           handleSpinResult(Math.floor(Math.random() * remainingStudents.length)); 
+                        } else {
+                            currentSpinData.isSpinning = false;
+                            spinBtn.textContent = 'SPIN';
+                            spinBtn.disabled = false;
+                        }
+                    }
+                }, 200); 
             }
         }
-        
         animateSpin();
     }
     
-    // Function to determine which student is actually at the arrow position (at top of wheel)
-    function determineSelectedIndex(finalAngle, totalSegments) {
-        // Normalize the angle to be between 0 and 2π
-        const normalizedAngle = finalAngle % (2 * Math.PI);
+    function handleSpinResult(selectedIndexOnWheel) {
+        if (remainingStudents.length === 0 || selectedIndexOnWheel < 0 || selectedIndexOnWheel >= remainingStudents.length) {
+            console.error("Error di handleSpinResult: Tidak ada sisa mahasiswa atau indeks tidak valid.", selectedIndexOnWheel, remainingStudents.length);
+            currentSpinData.isSpinning = false; spinBtn.textContent = 'SPIN'; spinBtn.disabled = false;
+            return;
+        }
+        const selectedStudent = remainingStudents[selectedIndexOnWheel];
         
-        // Calculate which segment is at the top (arrow position)
-        // Arrow is at top (π/2 position in standard coordinate system), so we need to find which segment is there
-        // Since wheel rotates clockwise, we need to calculate in opposite direction
+        if (!currentSpinData.group) {
+            alert("Kesalahan: Tidak ada kelompok aktif untuk menampung mahasiswa. Silakan pilih atau buat kelompok.");
+            currentSpinData.isSpinning = false; spinBtn.textContent = 'SPIN'; spinBtn.disabled = false;
+            return;
+        }
+
+        if (!results[currentSpinData.group]) results[currentSpinData.group] = [];
         
-        // Calculate segment size in radians
-        const segmentSize = (2 * Math.PI) / totalSegments;
-        
-        // The segment index that's at the top (where arrow points)
-        // We add totalSegments and take modulo to ensure positive result
-        // Note: Adding π/2 to angle to adjust for arrow at top position
-        const segmentIndex = Math.floor(totalSegments - ((normalizedAngle + Math.PI/2) / segmentSize) % totalSegments) % totalSegments;
-        
-        return segmentIndex;
-    }
-    
-    // Handle spin result
-    function handleSpinResult(selectedIndex) {
-        // Get selected student - now the one actually under the arrow
-        const selectedStudent = remainingStudents[selectedIndex];
-        
-        // Add to results
         results[currentSpinData.group].push(selectedStudent);
-        currentSpinData.count++;
+        currentSpinData.count = results[currentSpinData.group].length;
         currentCount.textContent = `Anggota terpilih: ${currentSpinData.count}/${studentsPerGroup}`;
         
-        // Update results display
         updateResultsDisplay();
+        updateRemainingStudents(); 
         
-        // Update remaining students list
-        updateRemainingStudents();
-        
-        // Check if current group is full
         if (currentSpinData.count >= studentsPerGroup) {
-            // Move to next group if available
-            const currentGroupIndex = groups.indexOf(currentSpinData.group);
+            const currentGroupIndex = groups.indexOf(currentSpinData.group); let nextGroupAssigned = false;
             if (currentGroupIndex < groups.length - 1) {
-                currentSpinData.group = groups[currentGroupIndex + 1];
-                currentSpinData.count = 0;
-                
-                // Initialize results for this new group
-                if (!results[currentSpinData.group]) {
-                    results[currentSpinData.group] = [];
+                for (let i = currentGroupIndex + 1; i < groups.length; i++) {
+                    if (!results[groups[i]] || results[groups[i]].length < studentsPerGroup) {
+                        currentSpinData.group = groups[i]; currentSpinData.count = results[groups[i]] ? results[groups[i]].length : 0;
+                        if (!results[currentSpinData.group]) results[currentSpinData.group] = [];
+                        nextGroupAssigned = true; break;
+                    }
                 }
-            } else {
-                // All groups are filled
-                currentSpinData.group = null;
-            }
+                 if (!nextGroupAssigned) currentSpinData.group = null; 
+            } else { currentSpinData.group = null; }
             
-            // Update group display
             if (currentSpinData.group) {
                 currentGroup.textContent = `Kelompok saat ini: ${currentSpinData.group}`;
-                currentCount.textContent = `Anggota terpilih: 0/${studentsPerGroup}`;
+                currentCount.textContent = `Anggota terpilih: ${currentSpinData.count}/${studentsPerGroup}`;
             } else {
-                currentGroup.textContent = `Semua kelompok telah terisi`;
-                currentCount.textContent = `Anggota terpilih: -`;
+                currentGroup.textContent = `Semua kelompok telah terisi`; currentCount.textContent = `Anggota terpilih: -`;
             }
         }
         
-        // Redraw wheel with updated remaining students
-        drawWheel();
-        
-        // Reset spinning flag
-        currentSpinData.isSpinning = false;
+        currentSpinData.isSpinning = false; spinBtn.textContent = 'SPIN'; spinBtn.disabled = false;
     }
     
-    // Update results display
     function updateResultsDisplay() {
         let displayText = '';
-        
         for (const group in results) {
-            displayText += `=== ${group} ===\n`;
-            results[group].forEach((student, index) => {
-                displayText += `${index + 1}. ${student}\n`;
-            });
-            displayText += '\n';
+            if (results[group] && results[group].length > 0) { // Pastikan results[group] ada
+                displayText += `=== ${group} ===\n`;
+                results[group].forEach((student, index) => { displayText += `${index + 1}. ${student}\n`; });
+                displayText += '\n';
+            }
         }
-        
         resultBox.textContent = displayText;
     }
     
-    // Reset results
+    // FUNGSI RESET YANG DIPERBARUI
     function resetResults() {
-        if (Object.keys(results).length === 0) {
-            alert('Belum ada hasil untuk direset!');
+        let hasResultsToClear = false;
+        for (const groupName in results) {
+            if (results[groupName] && results[groupName].length > 0) {
+                hasResultsToClear = true;
+                break;
+            }
+        }
+
+        if (!hasResultsToClear) {
+            alert('Belum ada hasil pembagian kelompok untuk direset.');
             return;
         }
         
-        if (confirm('Anda yakin ingin menghapus semua hasil pembagian kelompok yang sudah ada?')) {
-            results = {};
+        if (confirm('Anda yakin ingin mereset hasil pembagian kelompok? Daftar mahasiswa dan kelompok yang sudah diinput akan TETAP ADA.')) {
+            results = {}; // Hanya reset hasil pembagian kelompok
+            
+            // Reset data spin saat ini dan state UI terkait
             currentSpinData.group = null;
             currentSpinData.count = 0;
+            currentSpinData.currentWheelAngle = 0; // Reset sudut roda agar tampilan konsisten
+            currentSpinData.isSpinning = false;
+
+            updateRemainingStudents(); // Ini akan mengisi ulang remainingStudents dari daftar students utama karena results kosong
+            updateResultsDisplay(); // Ini akan mengosongkan resultBox
             
-            // Update UI
             currentGroup.textContent = 'Kelompok saat ini: -';
             currentCount.textContent = `Anggota terpilih: 0/${studentsPerGroup}`;
-            resultBox.textContent = '';
+            // remainingCounter akan diupdate oleh updateRemainingStudents()
+
+            drawWheel(); // Gambar ulang roda dengan semua mahasiswa dan sudut roda reset
+            spinBtn.textContent = 'SPIN';
+            spinBtn.disabled = false;
             
-            // Update remaining students
-            updateRemainingStudents();
-            drawWheel();
+            alert('Hasil pembagian kelompok telah direset. Semua mahasiswa kembali tersedia untuk diputar.');
         }
     }
     
-    // Download results
     function downloadResults() {
-        if (Object.keys(results).length === 0) {
-            alert('Belum ada hasil untuk didownload!');
-            return;
-        }
-        
-        let content = 'HASIL PEMBAGIAN KELOMPOK MAHASISWA TI 23 K&L\n';
-        content += `Generated pada: ${new Date().toLocaleString()}\n\n`;
-        
+        let hasResults = false; for (const group in results) if (results[group] && results[group].length > 0) { hasResults = true; break; }
+        if (!hasResults) { alert('Belum ada hasil pembagian kelompok untuk didownload!'); return; }
+        let content = 'HASIL PEMBAGIAN KELOMPOK\n'; content += `Generated pada: ${new Date().toLocaleString()}\n\n`;
         for (const group in results) {
-            content += `=== ${group} ===\n`;
-            results[group].forEach((student, index) => {
-                content += `${index + 1}. ${student}\n`;
-            });
-            content += '\n';
+             if (results[group] && results[group].length > 0) {
+                content += `=== ${group} ===\n`;
+                results[group].forEach((student, index) => { content += `${index + 1}. ${student}\n`; });
+                content += '\n';
+            }
         }
-        
-        // Count distribution
-        content += 'STATISTIK PEMBAGIAN:\n';
-        content += `Total mahasiswa: ${students.length}\n`;
-        content += `Total kelompok: ${groups.length}\n`;
-        content += `Mahasiswa per kelompok: ${studentsPerGroup}\n`;
-        content += `Sisa mahasiswa belum terbagi: ${remainingStudents.length}\n\n`;
-        
-        // Create downloadable link
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'hasil_pembagian_kelompok.txt';
-        
-        // Append to body, click, and remove
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        content += 'STATISTIK PEMBAGIAN:\n'; content += `Total mahasiswa terdaftar: ${students.length}\n`;
+        content += `Total kelompok terdaftar: ${groups.length}\n`; content += `Target mahasiswa per kelompok: ${studentsPerGroup}\n`;
+        let assignedStudentsCount = 0; for (const group in results) { if(results[group]) assignedStudentsCount += results[group].length; }
+        content += `Total mahasiswa terbagi: ${assignedStudentsCount}\n`; content += `Sisa mahasiswa belum terbagi: ${remainingStudents.length}\n\n`;
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'hasil_pembagian_kelompok.txt';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }
     
-    // Event listeners for action buttons
     spinBtn.addEventListener('click', spin);
-    resetBtn.addEventListener('click', resetResults);
+    resetBtn.addEventListener('click', resetResults); // Menggunakan fungsi reset yang baru
     downloadBtn.addEventListener('click', downloadResults);
     
-    // Enter key for inputs
-    studentNameInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            addStudentBtn.click();
-        }
-    });
+    studentNameInput.addEventListener('keypress', e => { if (e.key === 'Enter') addStudentBtn.click(); });
+    groupNameInput.addEventListener('keypress', e => { if (e.key === 'Enter') addGroupBtn.click(); });
     
-    groupNameInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            addGroupBtn.click();
-        }
-    });
-    
-    // Initialize app
-    updateRemainingStudents();
-    drawWheel();
+    // Initialize
+    updateRemainingStudents(); 
+    drawWheel(); 
+    maxPerGroupDisplay.textContent = studentsPerGroup;
 });
